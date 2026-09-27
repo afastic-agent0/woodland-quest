@@ -1,0 +1,14 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Local database checks</title><body><h1>Local database checks</h1><p>Developer checks. This creates isolated QA profiles on this browser.</p><pre id="result">Running…</pre><script type="module">
+import {loadPlayer,answerPlayer,hintPlayer,exportPlayer} from './db.js';
+import {questions} from './questions.js';
+const log=[],ok=(v,t)=>{if(!v)throw Error(t);log.push('PASS '+t);};
+try{
+const name='QA DB '+Date.now();let p=await loadPlayer(name);ok(p.solved.length===0,'new profile');ok((await loadPlayer(name.toUpperCase())).id===p.id,'case-insensitive resume');
+const q=questions[0];const pair=await Promise.allSettled([answerPlayer(p.id,q.id,q.answer),answerPlayer(p.id,q.id,q.answer)]);ok(pair.filter(x=>x.status==='fulfilled').length===1,'concurrent answers count once');
+let data=await exportPlayer(p.id);ok(data.answers.length===1&&data.profile.points===100,'answer and progress commit together');
+let rejected=false;try{await answerPlayer(p.id,questions[2].id,0);}catch{rejected=true;}ok(rejected,'future lock rejected');data=await exportPlayer(p.id);ok(data.answers.length===1&&data.profile.solved.length===1,'failed transaction leaves records intact');
+const q2=questions[1];await hintPlayer(p.id,q2.id);await answerPlayer(p.id,q2.id,(q2.answer+1)%4);await answerPlayer(p.id,q2.id,q2.answer);data=await exportPlayer(p.id);ok(data.answers.length===3,'wrong and right attempts stored separately');ok(data.profile.points===150,'hint and retry penalty saved');ok(data.answers[1].hintUsed&&data.answers[2].attemptNumber===2&&Boolean(data.answers[2].answeredAt),'hint, count and timestamp stored');
+const loaded=await loadPlayer(name);ok(loaded.solved.length===2,'persistent profile readback');const other=await loadPlayer(name+'B');ok(other.solved.length===0&&(await exportPlayer(other.id)).answers.length===0,'separate nickname isolation');
+document.getElementById('result').textContent=log.join('\n')+'\nALL DATABASE CHECKS PASSED';
+}catch(e){document.getElementById('result').textContent=log.join('\n')+'\nFAIL '+e.message;}
+</script></body></html>

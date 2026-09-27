@@ -1,0 +1,33 @@
+# Signal Lab managed configuration
+www.cybersecurities.cloud {
+	root * /srv/cyber-signal/current
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		X-Frame-Options DENY
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Strict-Transport-Security "max-age=31536000"
+		Cache-Control "no-cache"
+		-Server
+	}
+	file_server
+}
+
+cybersecurities.cloud {
+	redir https://www.cybersecurities.cloud{uri} permanent
+}
+
+http://[YOUR_SERVER_IP] {
+	redir https://www.cybersecurities.cloud{uri} permanent
+}
+
+# Installation checks stay on the server loopback interface.
+http://127.0.0.1:8081 {
+	bind 127.0.0.1
+	root * /srv/cyber-signal/current
+	header Cache-Control "no-store"
+	header X-Content-Type-Options nosniff
+	file_server
+}
